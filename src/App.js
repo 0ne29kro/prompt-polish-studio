@@ -157,9 +157,9 @@ function RadarBlock({ label, diagnosis, lintResults, color, accentColor }) {
   );
 }
 
-function Panel({ children, style = {} }) {
+function Panel({ children, style = {}, className }) {
   return (
-    <div style={{
+    <div className={className} style={{
       background: 'rgba(13,17,23,0.8)',
       border: '1px solid rgba(255,255,255,0.06)',
       borderRadius: '14px',
@@ -194,6 +194,9 @@ export default function App() {
   const [improvedPrompt, setImprovedPrompt] = useState('');
   const [originalOutput, setOriginalOutput] = useState('');
   const [improvedOutput, setImprovedOutput] = useState('');
+  const [questions, setQuestions] = useState([]);
+  const [answers, setAnswers] = useState({});
+  const [showQuestions, setShowQuestions] = useState(false);
 
   function lintPrompt(text) {
     const issues = [];
@@ -222,6 +225,9 @@ export default function App() {
     setImprovedPrompt('');
     setOriginalOutput('');
     setImprovedOutput('');
+    setQuestions([]);
+    setAnswers({});
+    setShowQuestions(false);
 
     const issues = lintPrompt(prompt);
     setLintResults(issues);
@@ -237,12 +243,36 @@ export default function App() {
       setDiagnosis(diagData);
       setStatus(prev => [...prev, 'Original prompt scored ✓']);
 
-      setStatus(prev => [...prev, 'Polishing your prompt...']);
-      const polishResponse = await fetch('http://localhost:3001/api/polish', {
+      setStatus(prev => [...prev, 'Generating clarifying questions...']);
+      const questionsResponse = await fetch('http://localhost:3001/api/questions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ prompt, summary: diagData.summary })
       });
+      if (!questionsResponse.ok) throw new Error('Questions failed: ' + questionsResponse.status);
+      const questionsData = await questionsResponse.json();
+      setQuestions(questionsData.questions);
+      setStatus(prev => [...prev, 'Generating clarifying questions ✓']);
+      setShowQuestions(true);
+
+    } catch (err) {
+      console.error('Error:', err);
+      setStatus(prev => [...prev, `✗ ${err.message}`]);
+    }
+  }
+
+  async function handlePolish() {
+    setShowQuestions(false);
+    const answersArray = questions.map((q, i) => ({ question: q, answer: answers[i] || '' }));
+
+    try {
+      setStatus(prev => [...prev, 'Polishing your prompt...']);
+      const polishResponse = await fetch('http://localhost:3001/api/polish', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt, summary: diagnosis.summary, answers: answersArray })
+      });
+      if (!polishResponse.ok) throw new Error('Polish failed: ' + polishResponse.status);
       const polishData = await polishResponse.json();
       setImprovedPrompt(polishData.improved);
       setStatus(prev => [...prev, 'Prompt polished ✓']);
@@ -253,6 +283,7 @@ export default function App() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ prompt: polishData.improved })
       });
+      if (!improvedDiagResponse.ok) throw new Error('Improved diagnosis failed');
       const improvedDiagData = await improvedDiagResponse.json();
       setImprovedDiagnosis(improvedDiagData);
       setStatus(prev => [...prev, 'Polished prompt scored ✓']);
@@ -433,6 +464,76 @@ export default function App() {
 
         {/* Status */}
         <StatusPanel steps={status} />
+
+        {/* Clarifying Questions Panel */}
+        {showQuestions && (
+          <Panel style={{ marginBottom: '20px' }} className="fade-in">
+            <PanelTitle>Clarifying Questions</PanelTitle>
+            <p style={{
+              fontFamily: "'IBM Plex Sans', sans-serif",
+              fontSize: '13px',
+              color: '#718096',
+              marginBottom: '20px',
+              lineHeight: '1.6'
+            }}>
+              Answer these to get a more personalized polish. You can leave any blank.
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              {questions.map((q, i) => (
+                <div key={i}>
+                  <p style={{
+                    fontFamily: "'IBM Plex Sans', sans-serif",
+                    fontSize: '13px',
+                    color: '#a0aec0',
+                    marginBottom: '8px',
+                    lineHeight: '1.5'
+                  }}>{q}</p>
+                  <input
+                    type="text"
+                    value={answers[i] || ''}
+                    onChange={e => setAnswers(prev => ({ ...prev, [i]: e.target.value }))}
+                    placeholder="Your answer..."
+                    style={{
+                      width: '100%',
+                      background: 'rgba(255,255,255,0.02)',
+                      border: '1px solid rgba(255,255,255,0.06)',
+                      borderRadius: '8px',
+                      padding: '10px 14px',
+                      color: '#e2e8f0',
+                      fontFamily: "'IBM Plex Sans', sans-serif",
+                      fontSize: '13px',
+                      outline: 'none',
+                      transition: 'border-color 0.2s'
+                    }}
+                    onFocus={e => e.target.style.borderColor = 'rgba(99,179,237,0.3)'}
+                    onBlur={e => e.target.style.borderColor = 'rgba(255,255,255,0.06)'}
+                  />
+                </div>
+              ))}
+            </div>
+            <button
+              onClick={handlePolish}
+              style={{
+                marginTop: '20px',
+                background: 'linear-gradient(135deg, #276749, #1a4731)',
+                border: '1px solid rgba(104,211,145,0.3)',
+                borderRadius: '8px',
+                padding: '10px 24px',
+                color: '#9ae6b4',
+                fontFamily: "'JetBrains Mono', monospace",
+                fontSize: '12px',
+                letterSpacing: '0.1em',
+                cursor: 'pointer',
+                transition: 'all 0.2s',
+                boxShadow: '0 0 20px rgba(104,211,145,0.1)'
+              }}
+              onMouseEnter={e => e.target.style.boxShadow = '0 0 30px rgba(104,211,145,0.2)'}
+              onMouseLeave={e => e.target.style.boxShadow = '0 0 20px rgba(104,211,145,0.1)'}
+            >
+              POLISH MY PROMPT
+            </button>
+          </Panel>
+        )}
 
         {/* Main Grid */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>

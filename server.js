@@ -74,10 +74,44 @@ ${prompt}`);
   }
 });
 
-app.post('/api/polish', async (req, res) => {
+app.post('/api/questions', async (req, res) => {
   const { prompt, summary } = req.body;
 
   try {
+    const text = await callAI(`You are a prompt engineering assistant.
+
+A user submitted this prompt:
+"${prompt}"
+
+Diagnostic summary: ${summary}
+
+Generate 3-5 targeted clarifying questions that, when answered, would help you write a significantly better version of this prompt. Focus on missing context, intent, audience, desired format, or constraints.
+
+Return ONLY valid JSON in this exact format with no extra text:
+{
+  "questions": ["question1", "question2", "question3"]
+}`);
+
+    const match = text.match(/\{[\s\S]*\}/);
+    if (!match) throw new Error('No JSON found in response');
+    const json = JSON.parse(match[0]);
+    res.json(json);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Questions failed' });
+  }
+});
+
+app.post('/api/polish', async (req, res) => {
+  const { prompt, summary, answers } = req.body;
+
+  try {
+    let answersSection = '';
+    if (answers && answers.length > 0) {
+      answersSection = '\n\nThe user provided these additional details:\n' +
+        answers.map(({ question, answer }) => `Q: ${question}\nA: ${answer}`).join('\n\n');
+    }
+
     const text = await callAI(`You are an expert prompt engineer.
 
 Rewrite the following prompt to improve clarity and effectiveness.
@@ -90,13 +124,14 @@ Improvements should include:
 - Reasonable constraints
 
 Do not change the intent of the original prompt.
+Incorporate the user's additional details to make the rewrite highly personalized.
 Return ONLY the improved prompt text, nothing else.
 
 Original prompt:
 ${prompt}
 
 Diagnostic summary:
-${summary}`);
+${summary}${answersSection}`);
 
     res.json({ improved: text.trim() });
   } catch (err) {
