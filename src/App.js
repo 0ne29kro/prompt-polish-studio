@@ -229,6 +229,8 @@ function CyclingTip({ active }) {
   );
 }
 
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001';
+
 export default function App() {
   const [prompt, setPrompt] = useState('');
   const [lintResults, setLintResults] = useState([]);
@@ -241,6 +243,13 @@ export default function App() {
   const [questions, setQuestions] = useState([]);
   const [answers, setAnswers] = useState({});
   const [showQuestions, setShowQuestions] = useState(false);
+  const [copiedPrompt, setCopiedPrompt] = useState(false);
+
+  function handleCopyPrompt() {
+    navigator.clipboard.writeText(improvedPrompt);
+    setCopiedPrompt(true);
+    setTimeout(() => setCopiedPrompt(false), 2000);
+  }
 
   function lintPrompt(text) {
     const issues = [];
@@ -278,7 +287,7 @@ export default function App() {
     setStatus(['Analyzing your prompt...']);
 
     try {
-      const diagResponse = await fetch('http://localhost:3001/api/analyze', {
+      const diagResponse = await fetch(`${API_URL}/api/analyze`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ prompt })
@@ -288,7 +297,7 @@ export default function App() {
       setStatus(prev => [...prev, 'Original prompt scored ✓']);
 
       setStatus(prev => [...prev, 'Generating clarifying questions...']);
-      const questionsResponse = await fetch('http://localhost:3001/api/questions', {
+      const questionsResponse = await fetch(`${API_URL}/api/questions`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ prompt, summary: diagData.summary })
@@ -311,7 +320,7 @@ export default function App() {
 
     try {
       setStatus(prev => [...prev, 'Polishing your prompt...']);
-      const polishResponse = await fetch('http://localhost:3001/api/polish', {
+      const polishResponse = await fetch(`${API_URL}/api/polish`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ prompt, summary: diagnosis.summary, answers: answersArray })
@@ -322,7 +331,7 @@ export default function App() {
       setStatus(prev => [...prev, 'Prompt polished ✓']);
 
       setStatus(prev => [...prev, 'Scoring polished prompt...']);
-      const improvedDiagResponse = await fetch('http://localhost:3001/api/analyze', {
+      const improvedDiagResponse = await fetch(`${API_URL}/api/analyze`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ prompt: polishData.improved })
@@ -333,7 +342,7 @@ export default function App() {
       setStatus(prev => [...prev, 'Polished prompt scored ✓']);
 
       setStatus(prev => [...prev, 'Generating output comparison...']);
-      const compareResponse = await fetch('http://localhost:3001/api/compare', {
+      const compareResponse = await fetch(`${API_URL}/api/compare`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ original: prompt, improved: polishData.improved })
@@ -630,13 +639,30 @@ export default function App() {
                 </div>
                 <div style={{ textAlign: 'center', color: '#2d3748', fontSize: '18px' }}>↓</div>
                 <div>
-                  <p style={{
-                    fontFamily: "'JetBrains Mono', monospace",
-                    fontSize: '10px',
-                    color: '#68d391',
-                    letterSpacing: '0.15em',
-                    marginBottom: '8px'
-                  }}>POLISHED</p>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                    <p style={{
+                      fontFamily: "'JetBrains Mono', monospace",
+                      fontSize: '10px',
+                      color: '#68d391',
+                      letterSpacing: '0.15em',
+                    }}>POLISHED</p>
+                    <button
+                      onClick={handleCopyPrompt}
+                      style={{
+                        background: 'transparent',
+                        border: 'none',
+                        fontFamily: "'JetBrains Mono', monospace",
+                        fontSize: '10px',
+                        letterSpacing: '0.1em',
+                        color: copiedPrompt ? '#68d391' : '#4a5568',
+                        cursor: 'pointer',
+                        padding: '0',
+                        transition: 'color 0.2s'
+                      }}
+                    >
+                      {copiedPrompt ? 'COPIED ✓' : 'COPY'}
+                    </button>
+                  </div>
                   <p style={{
                     fontFamily: "'IBM Plex Sans', sans-serif",
                     fontSize: '13px',
