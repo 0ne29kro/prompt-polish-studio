@@ -185,6 +185,50 @@ function PanelTitle({ children }) {
   );
 }
 
+const TIPS = [
+  "Vague prompts get vague answers — specificity is the single most impactful prompt skill",
+  "Adding 'You are an expert in...' can dramatically shift the tone and depth of a response",
+  "Structured output requests — like bullet points or numbered lists — reduce AI rambling by forcing prioritization",
+  "Constraints aren't limitations — they're instructions. Word limits force the AI to keep only what matters",
+  "Context is everything. The more the AI knows about your situation, the more useful its answer becomes",
+  "The best prompts read like a brief to a smart colleague, not a Google search",
+  "Output format matters as much as the question itself — always specify how you want the answer",
+];
+
+function CyclingTip({ active }) {
+  const [index, setIndex] = useState(0);
+  const [visible, setVisible] = useState(true);
+
+  useEffect(() => {
+    if (!active) return;
+    const interval = setInterval(() => {
+      setVisible(false);
+      setTimeout(() => {
+        setIndex(prev => (prev + 1) % TIPS.length);
+        setVisible(true);
+      }, 400);
+    }, 8000);
+    return () => clearInterval(interval);
+  }, [active]);
+
+  return (
+    <div style={{ minHeight: '80px', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '8px' }}>
+      <p style={{
+        fontFamily: "'IBM Plex Sans', sans-serif",
+        fontSize: '13px',
+        color: '#4a5568',
+        fontStyle: 'italic',
+        textAlign: 'center',
+        lineHeight: '1.6',
+        opacity: visible ? 1 : 0,
+        transition: 'opacity 0.4s ease'
+      }}>
+        💡 {TIPS[index]}
+      </p>
+    </div>
+  );
+}
+
 export default function App() {
   const [prompt, setPrompt] = useState('');
   const [lintResults, setLintResults] = useState([]);
@@ -629,9 +673,26 @@ export default function App() {
                 whiteSpace: 'pre-wrap'
               }}>{originalOutput}</p>
             ) : (
-              <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '12px', color: '#2d3748' }}>
-                awaiting analysis...
-              </p>
+              <>
+                {status.length > 0 && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+                    <div style={{
+                      width: '6px', height: '6px', borderRadius: '50%',
+                      background: '#63b3ed',
+                      boxShadow: '0 0 6px #63b3ed',
+                      flexShrink: 0,
+                      animation: 'pulse 1.5s infinite'
+                    }} />
+                    <span style={{
+                      fontFamily: "'JetBrains Mono', monospace",
+                      fontSize: '11px',
+                      color: '#4a5568',
+                      letterSpacing: '0.05em'
+                    }}>{status[status.length - 1].replace('✓', '').trim()}</span>
+                  </div>
+                )}
+                <CyclingTip active={status.length > 0} />
+              </>
             )}
           </Panel>
 
@@ -651,9 +712,26 @@ export default function App() {
                 whiteSpace: 'pre-wrap'
               }}>{improvedOutput}</p>
             ) : (
-              <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '12px', color: '#2d3748' }}>
-                awaiting analysis...
-              </p>
+              <>
+                {status.length > 0 && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+                    <div style={{
+                      width: '6px', height: '6px', borderRadius: '50%',
+                      background: '#63b3ed',
+                      boxShadow: '0 0 6px #63b3ed',
+                      flexShrink: 0,
+                      animation: 'pulse 1.5s infinite'
+                    }} />
+                    <span style={{
+                      fontFamily: "'JetBrains Mono', monospace",
+                      fontSize: '11px',
+                      color: '#4a5568',
+                      letterSpacing: '0.05em'
+                    }}>{status[status.length - 1].replace('✓', '').trim()}</span>
+                  </div>
+                )}
+                <CyclingTip active={status.length > 0} />
+              </>
             )}
           </Panel>
 
