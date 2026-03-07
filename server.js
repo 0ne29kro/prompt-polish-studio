@@ -29,7 +29,7 @@ async function callAI(prompt) {
     const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
     const response = await client.messages.create({
       model: 'claude-sonnet-4-6',
-      max_tokens: 1000,
+      max_tokens: 4096,
       messages: [{ role: 'user', content: prompt }]
     });
     return response.content[0].text;

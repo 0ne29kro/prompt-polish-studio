@@ -1,16 +1,62 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis } from 'recharts';
+
+// Animated score counter
+function AnimatedScore({ target }) {
+  const [display, setDisplay] = useState(0);
+  useEffect(() => {
+    let start = 0;
+    const duration = 1200;
+    const step = 16;
+    const increment = target / (duration / step);
+    const timer = setInterval(() => {
+      start += increment;
+      if (start >= target) {
+        setDisplay(target);
+        clearInterval(timer);
+      } else {
+        setDisplay(Math.floor(start));
+      }
+    }, step);
+    return () => clearInterval(timer);
+  }, [target]);
+  return <>{display}</>;
+}
 
 function StatusPanel({ steps }) {
   if (steps.length === 0) return null;
   return (
-    <div className="bg-gray-900 border border-gray-700 rounded-xl p-4 mb-6">
-      <p className="text-sm font-semibold text-gray-300 mb-3">🤖 Claude is working...</p>
-      <ul className="space-y-1">
+    <div style={{
+      background: 'linear-gradient(135deg, rgba(15,20,30,0.95), rgba(20,28,40,0.95))',
+      border: '1px solid rgba(99,179,237,0.2)',
+      borderRadius: '12px',
+      padding: '16px 20px',
+      marginBottom: '24px',
+      boxShadow: '0 0 20px rgba(99,179,237,0.05)'
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
+        <div style={{
+          width: '8px', height: '8px', borderRadius: '50%',
+          background: '#63b3ed',
+          boxShadow: '0 0 8px #63b3ed',
+          animation: 'pulse 1.5s infinite'
+        }} />
+        <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '12px', color: '#63b3ed', letterSpacing: '0.1em' }}>
+          CLAUDE PROCESSING
+        </p>
+      </div>
+      <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: '6px' }}>
         {steps.map((step, i) => (
-          <li key={i} className="text-sm text-green-400 flex items-center gap-2">
-            <span>▸</span>
-            <span>{step}</span>
+          <li key={i} style={{
+            fontFamily: "'JetBrains Mono', monospace",
+            fontSize: '12px',
+            color: step.includes('✓') ? '#68d391' : '#a0aec0',
+            display: 'flex', alignItems: 'center', gap: '8px'
+          }}>
+            <span style={{ color: step.includes('✓') ? '#68d391' : '#63b3ed' }}>
+              {step.includes('✓') ? '✓' : '▸'}
+            </span>
+            {step.replace('✓', '').trim()}
           </li>
         ))}
       </ul>
@@ -18,7 +64,7 @@ function StatusPanel({ steps }) {
   );
 }
 
-function RadarBlock({ label, diagnosis, lintResults, color }) {
+function RadarBlock({ label, diagnosis, lintResults, color, accentColor }) {
   const score = diagnosis
     ? Object.values(diagnosis).filter(v => typeof v === 'number').reduce((a, b) => a + b, 0)
     : null;
@@ -33,43 +79,113 @@ function RadarBlock({ label, diagnosis, lintResults, color }) {
 
   return (
     <div>
-      <p className="text-xs text-gray-400 uppercase tracking-widest mb-3">{label}</p>
+      <p style={{
+        fontFamily: "'JetBrains Mono', monospace",
+        fontSize: '10px',
+        color: '#4a5568',
+        letterSpacing: '0.15em',
+        textTransform: 'uppercase',
+        marginBottom: '16px'
+      }}>{label}</p>
+
       {diagnosis ? (
         <>
-          <p className="text-3xl font-bold">
-            <span style={{ color }}>{score}</span>
-            <span className="text-gray-500 text-lg"> / 100</span>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px', marginBottom: '4px' }}>
+            <p style={{
+              fontFamily: "'JetBrains Mono', monospace",
+              fontSize: '48px',
+              fontWeight: '700',
+              color,
+              lineHeight: 1,
+              textShadow: `0 0 20px ${color}60`
+            }}>
+              <AnimatedScore target={score} />
+            </p>
+            <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '18px', color: '#4a5568' }}>/100</span>
+          </div>
+          <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '10px', color: '#4a5568', letterSpacing: '0.1em', marginBottom: '16px' }}>
+            PROMPT SCORE
           </p>
-          <p className="text-xs text-gray-400 mt-1">Prompt Score</p>
-          <div className="flex justify-center mt-4">
+
+          <div style={{ display: 'flex', justifyContent: 'center' }}>
             <RadarChart width={260} height={200} data={data}>
-              <PolarGrid stroke="#374151" />
-              <PolarAngleAxis dataKey="axis" tick={{ fill: '#9ca3af', fontSize: 11 }} />
-              <Radar dataKey="value" stroke={color} fill={color} fillOpacity={0.4} />
+              <PolarGrid stroke="rgba(255,255,255,0.06)" />
+              <PolarAngleAxis dataKey="axis" tick={{ fill: '#4a5568', fontSize: 10, fontFamily: 'JetBrains Mono' }} />
+              <Radar dataKey="value" stroke={color} fill={color} fillOpacity={0.25} strokeWidth={1.5} />
             </RadarChart>
           </div>
-          <p className="text-gray-400 text-sm mt-3 italic border-l-2 border-gray-700 pl-3">
+
+          <p style={{
+            fontFamily: "'IBM Plex Sans', sans-serif",
+            fontSize: '13px',
+            color: '#718096',
+            fontStyle: 'italic',
+            borderLeft: `2px solid ${color}40`,
+            paddingLeft: '12px',
+            marginTop: '12px',
+            lineHeight: '1.6'
+          }}>
             {diagnosis.summary}
           </p>
+
           {lintResults && lintResults.length > 0 && (
-            <ul className="space-y-2 mt-4">
+            <ul style={{ listStyle: 'none', margin: '16px 0 0', padding: 0, display: 'flex', flexDirection: 'column', gap: '8px' }}>
               {lintResults.map((issue, i) => (
-                <li key={i} className="flex items-center gap-2 text-sm text-yellow-400">
+                <li key={i} style={{
+                  fontFamily: "'JetBrains Mono', monospace",
+                  fontSize: '11px',
+                  color: '#d69e2e',
+                  display: 'flex', alignItems: 'center', gap: '8px',
+                  background: 'rgba(214,158,46,0.05)',
+                  padding: '6px 10px',
+                  borderRadius: '6px',
+                  border: '1px solid rgba(214,158,46,0.15)'
+                }}>
                   <span>⚠</span>
-                  <span>{issue}</span>
+                  {issue}
                 </li>
               ))}
             </ul>
           )}
         </>
       ) : (
-        <p className="text-gray-500 text-sm">Analysis will appear here...</p>
+        <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '12px', color: '#2d3748' }}>
+          awaiting input...
+        </p>
       )}
     </div>
   );
 }
 
-function App() {
+function Panel({ children, style = {} }) {
+  return (
+    <div style={{
+      background: 'rgba(13,17,23,0.8)',
+      border: '1px solid rgba(255,255,255,0.06)',
+      borderRadius: '14px',
+      padding: '24px',
+      backdropFilter: 'blur(10px)',
+      ...style
+    }}>
+      {children}
+    </div>
+  );
+}
+
+function PanelTitle({ children }) {
+  return (
+    <p style={{
+      fontFamily: "'JetBrains Mono', monospace",
+      fontSize: '11px',
+      color: '#4a5568',
+      letterSpacing: '0.15em',
+      textTransform: 'uppercase',
+      marginBottom: '20px'
+    }}>{children}</p>
+  );
+}
+
+export default function App() {
   const [prompt, setPrompt] = useState('');
   const [lintResults, setLintResults] = useState([]);
   const [diagnosis, setDiagnosis] = useState(null);
@@ -100,7 +216,6 @@ function App() {
   }
 
   async function handleAnalyze() {
-    console.log('clicked', prompt);
     setStatus([]);
     setDiagnosis(null);
     setImprovedDiagnosis(null);
@@ -148,7 +263,7 @@ function App() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ original: prompt, improved: polishData.improved })
       });
-      if (!compareResponse.ok) throw new Error('Compare failed: ' + compareResponse.status);
+      if (!compareResponse.ok) throw new Error(`Compare failed: ${compareResponse.status}`);
       const compareData = await compareResponse.json();
       setOriginalOutput(compareData.originalOutput);
       setImprovedOutput(compareData.improvedOutput);
@@ -156,114 +271,293 @@ function App() {
 
     } catch (err) {
       console.error('Error:', err);
-      setStatus(prev => [...prev, '✗ Something failed']);
+      setStatus(prev => [...prev, `✗ ${err.message}`]);
     }
   }
 
   return (
-    <div className="min-h-screen bg-gray-950 text-white p-8">
+    <>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap');
 
-      {/* Header */}
-      <div className="text-center mb-8">
-        <h1 className="text-4xl font-bold tracking-tight">Prompt Polish</h1>
-        <p className="text-gray-400 mt-2">AI Prompt Diagnostics and Improvement</p>
-      </div>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
 
-      {/* Prompt Input Panel */}
-      <div className="bg-gray-900 border border-gray-800 rounded-xl p-6 mb-6">
-        <h2 className="text-lg font-semibold mb-4">Your Prompt</h2>
-        <textarea
-          className="w-full bg-gray-800 text-white rounded-lg p-4 text-sm resize-none outline-none border border-gray-700 focus:border-gray-500"
-          rows={4}
-          placeholder="Enter your prompt here..."
-          value={prompt}
-          onChange={(e) => setPrompt(e.target.value)}
-        />
-        <div className="flex gap-3 mt-4">
-          <button
-            onClick={handleAnalyze}
-            className="bg-white text-black font-semibold px-6 py-2 rounded-lg hover:bg-gray-200 transition">
-            Analyze Prompt
-          </button>
-          <button
-            onClick={() => setPrompt('How do I win a hackathon?')}
-            className="bg-gray-800 text-gray-300 font-semibold px-6 py-2 rounded-lg hover:bg-gray-700 transition">
-            Load Example
-          </button>
+        body {
+          background: #080c10;
+          min-height: 100vh;
+        }
+
+        .pp-root {
+          min-height: 100vh;
+          background:
+            radial-gradient(ellipse at 20% 0%, rgba(99,179,237,0.04) 0%, transparent 50%),
+            radial-gradient(ellipse at 80% 100%, rgba(104,211,145,0.03) 0%, transparent 50%),
+            #080c10;
+          color: #e2e8f0;
+          padding: 48px 40px;
+          max-width: 1400px;
+          margin: 0 auto;
+        }
+
+        @keyframes pulse {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.3; }
+        }
+
+        @keyframes fadeSlideUp {
+          from { opacity: 0; transform: translateY(12px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+
+        .fade-in {
+          animation: fadeSlideUp 0.4s ease forwards;
+        }
+
+        textarea:focus { outline: none; }
+
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #2d3748; border-radius: 2px; }
+      `}</style>
+
+      <div className="pp-root">
+
+        {/* Header */}
+        <div style={{ textAlign: 'center', marginBottom: '48px' }}>
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
+            <div style={{
+              width: '6px', height: '6px', borderRadius: '50%',
+              background: '#63b3ed',
+              boxShadow: '0 0 8px #63b3ed'
+            }} />
+            <p style={{
+              fontFamily: "'JetBrains Mono', monospace",
+              fontSize: '10px',
+              color: '#4a5568',
+              letterSpacing: '0.3em',
+              textTransform: 'uppercase'
+            }}>AI Prompt Engineering</p>
+            <div style={{
+              width: '6px', height: '6px', borderRadius: '50%',
+              background: '#63b3ed',
+              boxShadow: '0 0 8px #63b3ed'
+            }} />
+          </div>
+          <h1 style={{
+            fontFamily: "'IBM Plex Sans', sans-serif",
+            fontSize: '52px',
+            fontWeight: '600',
+            letterSpacing: '-0.02em',
+            background: 'linear-gradient(135deg, #e2e8f0 0%, #718096 100%)',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            marginBottom: '8px'
+          }}>
+            Prompt Polish
+          </h1>
+          <p style={{
+            fontFamily: "'IBM Plex Sans', sans-serif",
+            fontSize: '15px',
+            color: '#4a5568'
+          }}>
+            Diagnose, refine, and compare your AI prompts
+          </p>
         </div>
-      </div>
 
-      {/* Status Panel */}
-      <StatusPanel steps={status} />
-
-      {/* Main Grid */}
-      <div className="grid grid-cols-2 gap-6">
-
-        {/* Diagnostics Panel */}
-        <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
-          <h2 className="text-lg font-semibold mb-6">Prompt Diagnostics</h2>
-          <RadarBlock
-            label="Original Prompt"
-            diagnosis={diagnosis}
-            lintResults={lintResults}
-            color="#f97316"
+        {/* Input Panel */}
+        <Panel style={{ marginBottom: '20px' }}>
+          <PanelTitle>Input Prompt</PanelTitle>
+          <textarea
+            style={{
+              width: '100%',
+              background: 'rgba(255,255,255,0.02)',
+              border: '1px solid rgba(255,255,255,0.06)',
+              borderRadius: '8px',
+              padding: '14px 16px',
+              color: '#e2e8f0',
+              fontFamily: "'IBM Plex Sans', sans-serif",
+              fontSize: '14px',
+              lineHeight: '1.6',
+              resize: 'none',
+              transition: 'border-color 0.2s'
+            }}
+            rows={4}
+            placeholder="Enter your prompt here..."
+            value={prompt}
+            onChange={(e) => setPrompt(e.target.value)}
+            onFocus={e => e.target.style.borderColor = 'rgba(99,179,237,0.3)'}
+            onBlur={e => e.target.style.borderColor = 'rgba(255,255,255,0.06)'}
           />
-          {improvedDiagnosis && (
-            <>
-              <div className="border-t border-gray-800 my-6" />
-              <RadarBlock
-                label="Polished Prompt"
-                diagnosis={improvedDiagnosis}
-                lintResults={[]}
-                color="#4ade80"
-              />
-            </>
-          )}
-        </div>
+          <div style={{ display: 'flex', gap: '12px', marginTop: '16px' }}>
+            <button
+              onClick={handleAnalyze}
+              style={{
+                background: 'linear-gradient(135deg, #2d5a8e, #1a3a5c)',
+                border: '1px solid rgba(99,179,237,0.3)',
+                borderRadius: '8px',
+                padding: '10px 24px',
+                color: '#90cdf4',
+                fontFamily: "'JetBrains Mono', monospace",
+                fontSize: '12px',
+                letterSpacing: '0.1em',
+                cursor: 'pointer',
+                transition: 'all 0.2s',
+                boxShadow: '0 0 20px rgba(99,179,237,0.1)'
+              }}
+              onMouseEnter={e => e.target.style.boxShadow = '0 0 30px rgba(99,179,237,0.2)'}
+              onMouseLeave={e => e.target.style.boxShadow = '0 0 20px rgba(99,179,237,0.1)'}
+            >
+              ANALYZE PROMPT
+            </button>
+            <button
+              onClick={() => setPrompt('How do I win a hackathon?')}
+              style={{
+                background: 'transparent',
+                border: '1px solid rgba(255,255,255,0.06)',
+                borderRadius: '8px',
+                padding: '10px 24px',
+                color: '#4a5568',
+                fontFamily: "'JetBrains Mono', monospace",
+                fontSize: '12px',
+                letterSpacing: '0.1em',
+                cursor: 'pointer',
+                transition: 'all 0.2s'
+              }}
+              onMouseEnter={e => { e.target.style.borderColor = 'rgba(255,255,255,0.12)'; e.target.style.color = '#718096'; }}
+              onMouseLeave={e => { e.target.style.borderColor = 'rgba(255,255,255,0.06)'; e.target.style.color = '#4a5568'; }}
+            >
+              LOAD EXAMPLE
+            </button>
+          </div>
+        </Panel>
 
-        {/* Improvement Panel */}
-        <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
-          <h2 className="text-lg font-semibold mb-4">Prompt Improvement</h2>
-          {improvedPrompt ? (
-            <div className="space-y-4">
-              <div>
-                <p className="text-gray-400 text-xs uppercase tracking-widest mb-2">Original</p>
-                <p className="text-gray-400 text-sm bg-gray-800 rounded-lg p-3">{prompt}</p>
+        {/* Status */}
+        <StatusPanel steps={status} />
+
+        {/* Main Grid */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+
+          {/* Diagnostics */}
+          <Panel>
+            <PanelTitle>Prompt Diagnostics</PanelTitle>
+            <RadarBlock
+              label="Original Prompt"
+              diagnosis={diagnosis}
+              lintResults={lintResults}
+              color="#f6ad55"
+            />
+            {improvedDiagnosis && (
+              <div className="fade-in">
+                <div style={{ borderTop: '1px solid rgba(255,255,255,0.04)', margin: '28px 0' }} />
+                <RadarBlock
+                  label="Polished Prompt"
+                  diagnosis={improvedDiagnosis}
+                  lintResults={[]}
+                  color="#68d391"
+                />
               </div>
-              <div className="text-center text-gray-500">▼</div>
-              <div>
-                <p className="text-gray-400 text-xs uppercase tracking-widest mb-2">Polished</p>
-                <p className="text-white text-sm bg-gray-800 rounded-lg p-3 whitespace-pre-wrap">{improvedPrompt}</p>
+            )}
+          </Panel>
+
+          {/* Improvement */}
+          <Panel>
+            <PanelTitle>Prompt Improvement</PanelTitle>
+            {improvedPrompt ? (
+              <div className="fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <div>
+                  <p style={{
+                    fontFamily: "'JetBrains Mono', monospace",
+                    fontSize: '10px',
+                    color: '#4a5568',
+                    letterSpacing: '0.15em',
+                    marginBottom: '8px'
+                  }}>ORIGINAL</p>
+                  <p style={{
+                    fontFamily: "'IBM Plex Sans', sans-serif",
+                    fontSize: '13px',
+                    color: '#718096',
+                    background: 'rgba(255,255,255,0.02)',
+                    border: '1px solid rgba(255,255,255,0.04)',
+                    borderRadius: '8px',
+                    padding: '12px',
+                    lineHeight: '1.6'
+                  }}>{prompt}</p>
+                </div>
+                <div style={{ textAlign: 'center', color: '#2d3748', fontSize: '18px' }}>↓</div>
+                <div>
+                  <p style={{
+                    fontFamily: "'JetBrains Mono', monospace",
+                    fontSize: '10px',
+                    color: '#68d391',
+                    letterSpacing: '0.15em',
+                    marginBottom: '8px'
+                  }}>POLISHED</p>
+                  <p style={{
+                    fontFamily: "'IBM Plex Sans', sans-serif",
+                    fontSize: '13px',
+                    color: '#e2e8f0',
+                    background: 'rgba(104,211,145,0.03)',
+                    border: '1px solid rgba(104,211,145,0.1)',
+                    borderRadius: '8px',
+                    padding: '12px',
+                    lineHeight: '1.6',
+                    whiteSpace: 'pre-wrap'
+                  }}>{improvedPrompt}</p>
+                </div>
               </div>
-            </div>
-          ) : (
-            <p className="text-gray-500 text-sm">Improved prompt will appear here...</p>
-          )}
-        </div>
+            ) : (
+              <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '12px', color: '#2d3748' }}>
+                awaiting analysis...
+              </p>
+            )}
+          </Panel>
 
-        {/* Original Output Panel */}
-        <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
-          <h2 className="text-lg font-semibold mb-4">Original Output</h2>
-          {originalOutput ? (
-            <p className="text-gray-300 text-sm bg-gray-800 rounded-lg p-3 whitespace-pre-wrap">{originalOutput}</p>
-          ) : (
-            <p className="text-gray-500 text-sm">Output will appear here...</p>
-          )}
-        </div>
+          {/* Original Output */}
+          <Panel>
+            <PanelTitle>Original Output</PanelTitle>
+            {originalOutput ? (
+              <p className="fade-in" style={{
+                fontFamily: "'IBM Plex Sans', sans-serif",
+                fontSize: '13px',
+                color: '#718096',
+                background: 'rgba(255,255,255,0.02)',
+                border: '1px solid rgba(255,255,255,0.04)',
+                borderRadius: '8px',
+                padding: '14px',
+                lineHeight: '1.7',
+                whiteSpace: 'pre-wrap'
+              }}>{originalOutput}</p>
+            ) : (
+              <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '12px', color: '#2d3748' }}>
+                awaiting analysis...
+              </p>
+            )}
+          </Panel>
 
-        {/* Improved Output Panel */}
-        <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
-          <h2 className="text-lg font-semibold mb-4">Improved Output</h2>
-          {improvedOutput ? (
-            <p className="text-white text-sm bg-gray-800 rounded-lg p-3 whitespace-pre-wrap">{improvedOutput}</p>
-          ) : (
-            <p className="text-gray-500 text-sm">Output will appear here...</p>
-          )}
-        </div>
+          {/* Improved Output */}
+          <Panel>
+            <PanelTitle>Improved Output</PanelTitle>
+            {improvedOutput ? (
+              <p className="fade-in" style={{
+                fontFamily: "'IBM Plex Sans', sans-serif",
+                fontSize: '13px',
+                color: '#e2e8f0',
+                background: 'rgba(104,211,145,0.02)',
+                border: '1px solid rgba(104,211,145,0.08)',
+                borderRadius: '8px',
+                padding: '14px',
+                lineHeight: '1.7',
+                whiteSpace: 'pre-wrap'
+              }}>{improvedOutput}</p>
+            ) : (
+              <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '12px', color: '#2d3748' }}>
+                awaiting analysis...
+              </p>
+            )}
+          </Panel>
 
+        </div>
       </div>
-    </div>
+    </>
   );
 }
-
-export default App;
