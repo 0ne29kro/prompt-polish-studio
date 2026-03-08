@@ -512,6 +512,27 @@ export default function App() {
             >
               LOAD EXAMPLE
             </button>
+            {questions.length > 0 && (
+              <button
+                onClick={() => setShowQuestions(true)}
+                style={{
+                  background: 'transparent',
+                  border: '1px solid rgba(255,255,255,0.06)',
+                  borderRadius: '8px',
+                  padding: '10px 24px',
+                  color: '#4a5568',
+                  fontFamily: "'JetBrains Mono', monospace",
+                  fontSize: '12px',
+                  letterSpacing: '0.1em',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s'
+                }}
+                onMouseEnter={e => { e.target.style.borderColor = 'rgba(255,255,255,0.12)'; e.target.style.color = '#718096'; }}
+                onMouseLeave={e => { e.target.style.borderColor = 'rgba(255,255,255,0.06)'; e.target.style.color = '#4a5568'; }}
+              >
+                SHOW QUESTIONS
+              </button>
+            )}
           </div>
         </Panel>
 
